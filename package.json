@@ -1,7 +1,8 @@
 {
   "name": "assetlibrary",
   "private": true,
-  "version": "1.0.0",
+  "description": "A localhost port scanning utility",
+  "version": "1.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",

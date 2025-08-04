@@ -1,24 +1,20 @@
-// src/data/interfaces.ts
+// src/data/interfaces.ts - TugBoat Port Scanner Interfaces
 
-// Button Types and Variants
-export type ButtonVariant =
-  | "primary"
-  | "secondary"
-  | "danger"
-  | "glass"
-  | "outline"
-  | "icon";
+import React from 'react';
+
+// UI Component Types
+export type ButtonVariant = "primary" | "secondary" | "danger" | "glass" | "outline" | "icon";
 export type ButtonSize = "small" | "medium" | "large";
 
-// Icon configuration
+// Icon configuration for UI components
 export interface IconConfig {
-  type: "dot" | "custom"; // dot for simple colored circles, custom for SVG/other
+  type: "dot" | "custom";
   color?: string;
   size?: string;
-  content?: React.ReactNode; // For custom icons like SVG
+  content?: React.ReactNode;
 }
 
-// Button data interface
+// Button component interface
 export interface ButtonData {
   id: string;
   variant: ButtonVariant;
@@ -27,17 +23,34 @@ export interface ButtonData {
   disabled?: boolean;
   loading?: boolean;
   icon?: IconConfig;
-  className?: string; // Additional custom classes
-  metadata?: Record<string, unknown>; // For passing additional data through callbacks
+  className?: string;
+  metadata?: Record<string, unknown>;
 }
 
-// Generic callback function type
 export type ButtonCallback = (
   buttonData: ButtonData,
   event?: React.MouseEvent<HTMLButtonElement>
 ) => void;
 
-// Input Types
+// Toggle/Switch component interface
+export interface ToggleData {
+  id: string;
+  label: string;
+  checked: boolean;
+  disabled?: boolean;
+  variant?: "primary" | "success" | "custom";
+  size?: "small" | "medium" | "large";
+  className?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export type ToggleCallback = (
+  toggleData: ToggleData,
+  checked: boolean,
+  event?: React.ChangeEvent<HTMLInputElement>
+) => void;
+
+// Input component interface
 export type InputVariant = "primary" | "glass" | "outline";
 export type InputType = "text" | "password" | "email" | "search" | "number";
 
@@ -61,58 +74,6 @@ export type InputCallback = (
   event?: React.ChangeEvent<HTMLInputElement>
 ) => void;
 
-// Toggle/Switch Types
-export interface ToggleData {
-  id: string;
-  label: string;
-  checked: boolean;
-  disabled?: boolean;
-  variant?: "primary" | "success" | "custom";
-  size?: "small" | "medium" | "large";
-  className?: string;
-  metadata?: Record<string, unknown>;
-}
-
-export type ToggleCallback = (
-  toggleData: ToggleData,
-  checked: boolean,
-  event?: React.ChangeEvent<HTMLInputElement>
-) => void;
-
-// Card Types
-export type CardVariant = "glass" | "solid" | "gradient";
-
-export interface CardData {
-  id: string;
-  variant: CardVariant;
-  title?: string;
-  subtitle?: string;
-  content?: React.ReactNode;
-  footer?: React.ReactNode;
-  clickable?: boolean;
-  className?: string;
-  metadata?: Record<string, unknown>;
-}
-
-export type CardCallback = (
-  cardData: CardData,
-  event?: React.MouseEvent<HTMLDivElement>
-) => void;
-
-// Progress Bar Types
-export interface ProgressData {
-  id: string;
-  label: string;
-  value: number; // 0-100
-  max?: number;
-  variant?: "blue" | "green" | "red" | "yellow" | "custom";
-  size?: "small" | "medium" | "large";
-  animated?: boolean;
-  showValue?: boolean;
-  className?: string;
-  metadata?: Record<string, unknown>;
-}
-
 // Theme Types
 export type ThemeMode = "light" | "dark";
 
@@ -131,12 +92,25 @@ export interface BaseUIProps {
   metadata?: Record<string, unknown>;
 }
 
-// Status Types for System Monitoring
-export interface SystemStatus {
-  component: string;
-  status: "online" | "offline" | "warning" | "error";
-  value?: number;
-  max?: number;
-  unit?: string;
-  lastUpdate?: Date;
-}
+// Port Scanner Specific Interfaces
+
+// Port card interaction callbacks
+export type PortCardCallback = (port: number, action: string) => void;
+
+// Port scanning callbacks
+export type ScanCallback = (
+  ports?: number[],
+  ranges?: Array<[number, number]>
+) => void;
+
+// Settings update callbacks
+export type SettingsCallback = (
+  setting: string,
+  value: unknown
+) => void;
+
+// Navigation callbacks
+export type NavigationCallback = (
+  view: string,
+  data?: Record<string, unknown>
+) => void;

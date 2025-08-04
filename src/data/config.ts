@@ -1,329 +1,106 @@
-// src/data/config.ts
+// src/data/config.ts - TugBoat Port Scanner Configuration
 
-import React from "react";
-import {
-  ButtonData,
-  ButtonCallback,
-  ToggleData,
-  ToggleCallback,
-  InputData,
-  InputCallback,
-} from "./interfaces";
+import { ServiceType } from "../types/port";
 
-// Generic callback function for demonstration
-export const handleButtonClick: ButtonCallback = (buttonData, event) => {
-  console.log("Button clicked:", {
-    id: buttonData.id,
-    variant: buttonData.variant,
-    label: buttonData.label,
-    metadata: buttonData.metadata,
-    event: event?.type,
-  });
+// Default port ranges for scanning
+export const DEFAULT_PORT_RANGES: Array<[number, number]> = [
+  [3000, 3010], // React/Next.js dev servers
+  [4000, 4010], // Development servers
+  [5000, 5010], // Flask, Express servers
+  [5173, 5180], // Vite dev servers (5173 is default, but can increment)
+  [8000, 8010], // Django, HTTP servers
+  [9000, 9010], // Additional dev ports
+];
 
-  // You can add specific logic based on button type or metadata
-  if (buttonData.metadata?.action) {
-    console.log("Executing action:", buttonData.metadata.action);
+// Common development ports
+export const COMMON_DEV_PORTS = [
+  1313, // Hugo
+  3000, // React, Next.js
+  3001, // Alternative React
+  4000, // Jekyll, Gatsby
+  5000, // Flask default/Mac AirPlay Receiver
+  5173, // Vite default
+  5174, // Vite alternate
+  5175, // Vite alternate
+  5176, // Vite alternate
+  5177, // Vite alternate
+  5178, // Vite alternate
+  5179, // Vite alternate
+  5180, // Vite alternate
+  7000, // Mac AirPlay Receiver
+  8000, // Django, Python HTTP server
+  8080, // Tomcat, alternative HTTP
+  8888, // Jupyter
+  9000, // PHP-FPM
+];
+
+// Platform detection
+export const getPlatform = (): string => {
+  if (typeof navigator !== 'undefined') {
+    const userAgent = navigator.userAgent.toLowerCase();
+    if (userAgent.includes('mac')) return 'darwin';
+    if (userAgent.includes('win')) return 'win32';
+    if (userAgent.includes('linux')) return 'linux';
   }
+  return 'unknown';
 };
 
-// Generic callback function for toggles
-export const handleToggleChange: ToggleCallback = (
-  toggleData,
-  checked,
-  event
-) => {
-  console.log("Toggle changed:", {
-    id: toggleData.id,
-    label: toggleData.label,
-    checked: checked,
-    metadata: toggleData.metadata,
-    event: event?.type,
-  });
-
-  // You can add specific logic based on toggle type or metadata
-  if (toggleData.metadata?.action) {
-    console.log("Executing toggle action:", toggleData.metadata.action);
-  }
+// macOS-specific port mappings
+export const MACOS_SYSTEM_PORTS: Record<number, ServiceType> = {
+  5000: "airplay-receiver", // AirPlay Receiver
+  7000: "airplay-receiver", // AirPlay Receiver (Control)
 };
 
-// Generic callback function for text fields
-export const handleInputChange: InputCallback = (inputData, value, event) => {
-  console.log("Input changed:", {
-    id: inputData.id,
-    variant: inputData.variant,
-    type: inputData.type,
-    value: value,
-    metadata: inputData.metadata,
-    event: event?.type,
-  });
-
-  // You can add specific logic based on input type or metadata
-  if (inputData.metadata?.validation) {
-    console.log("Running validation for:", inputData.id);
-  }
+// Service type detection patterns
+export const SERVICE_PATTERNS: Record<string, ServiceType> = {
+  react: "react-dev",
+  vite: "vite-dev",
+  next: "nextjs",
+  express: "express-api",
+  django: "express-api",
+  flask: "express-api",
+  webpack: "webpack-dev",
+  apache: "static-server",
+  nginx: "static-server",
+  adminer: "database-admin",
+  phpmyadmin: "database-admin",
+  airplay: "airplay-receiver",
 };
 
-// Example button configurations
-export const buttonExamples: ButtonData[] = [
-  {
-    id: "btn-primary",
-    variant: "primary",
-    label: "Primary Action",
-    metadata: {
-      action: "save",
-      category: "form",
-      priority: "high",
-    },
-  },
-  {
-    id: "btn-secondary",
-    variant: "secondary",
-    label: "Secondary",
-    metadata: {
-      action: "cancel",
-      category: "form",
-      priority: "medium",
-    },
-  },
-  {
-    id: "btn-danger",
-    variant: "danger",
-    label: "Danger",
-    metadata: {
-      action: "delete",
-      category: "destructive",
-      priority: "high",
-      confirmRequired: true,
-    },
-  },
-  {
-    id: "btn-glass",
-    variant: "glass",
-    label: "Glass Effect",
-    metadata: {
-      action: "info",
-      category: "display",
-      priority: "low",
-    },
-  },
-  {
-    id: "btn-outline",
-    variant: "outline",
-    label: "Outline",
-    metadata: {
-      action: "view",
-      category: "navigation",
-      priority: "medium",
-    },
-  },
-  {
-    id: "btn-icon",
-    variant: "icon",
-    label: "With Icon",
-    icon: {
-      type: "dot",
-      color: "#3b82f6",
-      size: "w-5 h-5",
-    },
-    metadata: {
-      action: "status",
-      category: "indicator",
-      priority: "low",
-    },
-  },
-];
+// Service type labels for display
+export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
+  "react-dev": "React Dev",
+  nextjs: "Next.js",
+  "vite-dev": "Vite Dev",
+  "express-api": "Express API",
+  "webpack-dev": "Webpack Dev",
+  "static-server": "Static Server",
+  "database-admin": "DB Admin",
+  "airplay-receiver": "AirPlay Receiver",
+  unknown: "Unknown",
+};
 
-// Additional button examples with different sizes and states
-export const additionalButtonExamples: ButtonData[] = [
-  {
-    id: "btn-small",
-    variant: "primary",
-    size: "small",
-    label: "Small Button",
-    metadata: { size: "small" },
-  },
-  {
-    id: "btn-large",
-    variant: "secondary",
-    size: "large",
-    label: "Large Button",
-    metadata: { size: "large" },
-  },
-  {
-    id: "btn-disabled",
-    variant: "primary",
-    label: "Disabled",
-    disabled: true,
-    metadata: { state: "disabled" },
-  },
-  {
-    id: "btn-loading",
-    variant: "glass",
-    label: "Loading...",
-    loading: true,
-    metadata: { state: "loading" },
-  },
-  {
-    id: "btn-custom-icon",
-    variant: "icon",
-    label: "Custom Icon",
-    icon: {
-      type: "custom",
-      size: "w-5 h-5",
-      content: React.createElement(
-        "svg",
-        {
-          fill: "currentColor",
-          viewBox: "0 0 20 20",
-          className: "w-full h-full",
-        },
-        React.createElement("path", {
-          fillRule: "evenodd",
-          d: "M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z",
-          clipRule: "evenodd",
-        })
-      ),
-    },
-    metadata: {
-      action: "confirm",
-      iconType: "checkmark",
-    },
-  },
-];
+// Default scan settings
+export const DEFAULT_SCAN_SETTINGS = {
+  autoRefresh: true,
+  refreshInterval: 30, // seconds
+  enableNotifications: true,
+  scanTimeout: 5000, // milliseconds
+  maxConcurrentScans: 10,
+};
 
-// Toggle examples with different variants and sizes
-export const toggleExamples: ToggleData[] = [
-  {
-    id: "toggle-dark-mode",
-    label: "Dark Mode",
-    checked: true,
-    variant: "primary",
-    size: "medium",
-    metadata: {
-      action: "toggle-theme",
-      setting: "dark-mode",
-    },
-  },
-  {
-    id: "toggle-notifications",
-    label: "Notifications",
-    checked: true,
-    variant: "success",
-    size: "medium",
-    metadata: {
-      action: "toggle-notifications",
-      setting: "notifications",
-    },
-  },
-  {
-    id: "toggle-auto-save",
-    label: "Auto Save",
-    checked: false,
-    variant: "primary",
-    size: "small",
-    metadata: {
-      action: "toggle-auto-save",
-      setting: "auto-save",
-    },
-  },
-  {
-    id: "toggle-sound",
-    label: "Sound Effects",
-    checked: true,
-    variant: "custom",
-    size: "large",
-    metadata: {
-      action: "toggle-sound",
-      setting: "sound-effects",
-    },
-  },
-  {
-    id: "toggle-disabled",
-    label: "Disabled Toggle",
-    checked: false,
-    disabled: true,
-    variant: "primary",
-    size: "medium",
-    metadata: {
-      action: "toggle-disabled",
-      setting: "disabled-feature",
-    },
-  },
-];
+// Port status color configurations
+export const PORT_STATUS_COLORS = {
+  online: "bg-cyan-500 shadow-cyan-500/50",
+  offline: "bg-red-500 shadow-red-500/50",
+  testing: "bg-yellow-500 shadow-yellow-500/50 animate-pulse",
+  error: "bg-red-500 shadow-red-500/50",
+} as const;
 
-// Text field examples with different variants and features
-export const textFieldExamples: InputData[] = [
-  {
-    id: "input-username",
-    variant: "primary",
-    type: "text",
-    label: "Username",
-    placeholder: "Enter username...",
-    required: true,
-    metadata: {
-      validation: "required",
-      category: "authentication",
-    },
-  },
-  {
-    id: "input-password",
-    variant: "glass",
-    type: "password",
-    label: "Password",
-    placeholder: "Enter password...",
-    required: true,
-    metadata: {
-      validation: "password",
-      category: "authentication",
-      helperText: "Password must be at least 8 characters",
-    },
-  },
-  {
-    id: "input-email",
-    variant: "outline",
-    type: "email",
-    label: "Email Address",
-    placeholder: "Enter email...",
-    required: true,
-    metadata: {
-      validation: "email",
-      category: "contact",
-    },
-  },
-  {
-    id: "input-search",
-    variant: "primary",
-    type: "search",
-    label: "Search",
-    placeholder: "Search files...",
-    metadata: {
-      action: "search",
-      category: "navigation",
-    },
-  },
-  {
-    id: "input-phone",
-    variant: "outline",
-    type: "text",
-    label: "Phone Number",
-    placeholder: "+1 (555) 000-0000",
-    metadata: {
-      validation: "phone",
-      category: "contact",
-      helperText: "Include country code",
-    },
-  },
-  {
-    id: "input-disabled",
-    variant: "primary",
-    type: "text",
-    label: "Disabled Field",
-    placeholder: "This field is disabled",
-    disabled: true,
-    value: "Read-only value",
-    metadata: {
-      state: "disabled",
-      category: "example",
-    },
-  },
-];
+// Animation durations (in milliseconds)
+export const ANIMATION_DURATIONS = {
+  cardHover: 300,
+  statusChange: 200,
+  scan: 2000,
+  glow: 2000,
+} as const;

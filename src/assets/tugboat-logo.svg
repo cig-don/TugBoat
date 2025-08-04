@@ -1,0 +1,71 @@
+<svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Hull (bottom curved part) - Cyan color -->
+  <path d="M20 85 C20 75, 30 65, 60 65 C90 65, 100 75, 100 85 C100 95, 90 100, 60 100 C30 100, 20 95, 20 85 Z" 
+        fill="#00d4ff" 
+        stroke="#0891b2" 
+        stroke-width="2"/>
+  
+  <!-- Main superstructure (rectangular deck house) -->
+  <rect x="35" y="45" width="50" height="25" rx="3" 
+        fill="#1e293b" 
+        stroke="#334155" 
+        stroke-width="1.5"/>
+  
+  <!-- Bridge/Wheelhouse (smaller upper structure) -->
+  <rect x="45" y="25" width="30" height="25" rx="2" 
+        fill="#1e293b" 
+        stroke="#334155" 
+        stroke-width="1.5"/>
+  
+  <!-- Smokestack -->
+  <rect x="56" y="10" width="8" height="20" rx="1" 
+        fill="#1e293b" 
+        stroke="#334155" 
+        stroke-width="1.5"/>
+  
+  <!-- Left tire bumper -->
+  <circle cx="25" cy="78" r="10" 
+          fill="#374151" 
+          stroke="#4b5563" 
+          stroke-width="2"/>
+  <circle cx="25" cy="78" r="6" 
+          fill="none" 
+          stroke="#6b7280" 
+          stroke-width="1.5"/>
+  <!-- Tire rope lines -->
+  <path d="M19 78 L31 78 M22 72 L28 84 M22 84 L28 72" 
+        stroke="#6b7280" 
+        stroke-width="1" 
+        opacity="0.6"/>
+  
+  <!-- Right tire bumper -->
+  <circle cx="95" cy="78" r="10" 
+          fill="#374151" 
+          stroke="#4b5563" 
+          stroke-width="2"/>
+  <circle cx="95" cy="78" r="6" 
+          fill="none" 
+          stroke="#6b7280" 
+          stroke-width="1.5"/>
+  <!-- Tire rope lines -->
+  <path d="M89 78 L101 78 M92 72 L98 84 M92 84 L98 72" 
+        stroke="#6b7280" 
+        stroke-width="1" 
+        opacity="0.6"/>
+  
+  <!-- Bridge windows -->
+  <rect x="50" y="32" width="6" height="10" rx="1" 
+        fill="#60a5fa" 
+        opacity="0.8"/>
+  <rect x="64" y="32" width="6" height="10" rx="1" 
+        fill="#60a5fa" 
+        opacity="0.8"/>
+  
+  <!-- Main deck windows -->
+  <rect x="40" y="52" width="8" height="12" rx="1" 
+        fill="#60a5fa" 
+        opacity="0.6"/>
+  <rect x="72" y="52" width="8" height="12" rx="1" 
+        fill="#60a5fa" 
+        opacity="0.6"/>
+</svg>

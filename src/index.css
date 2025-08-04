@@ -1,3 +1,132 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Global styles for Oblivion theme */
+@layer base {
+  :root {
+    /* Default theme colors */
+    --bg-primary: #0a0e13;
+    --bg-secondary: #111827;
+    --bg-tertiary: #1f2937;
+    --text-primary: #ffffff;
+    --text-secondary: #b3b8c5;
+    --text-tertiary: #6b7280;
+    --accent-primary: #00d4ff;
+    --accent-secondary: #64b5f6;
+  }
+
+  /* Dark theme */
+  html.dark {
+    --bg-primary: #0a0e13;
+    --bg-secondary: #111827;
+    --bg-tertiary: #1f2937;
+    --text-primary: #ffffff;
+    --text-secondary: #b3b8c5;
+    --text-tertiary: #6b7280;
+    --accent-primary: #00d4ff;
+    --accent-secondary: #64b5f6;
+  }
+
+  /* Light theme */
+  html.light {
+    --bg-primary: #fefefe;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #e2e8f0;
+    --text-primary: #1e293b;
+    --text-secondary: #475569;
+    --text-tertiary: #64748b;
+    --accent-primary: #0ea5e9;
+    --accent-secondary: #3b82f6;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  /* Dark theme background pattern */
+  html.dark body {
+    background-image: radial-gradient(circle at 25% 25%, rgba(0, 212, 255, 0.05) 0%, transparent 50%),
+                      radial-gradient(circle at 75% 75%, rgba(100, 181, 246, 0.05) 0%, transparent 50%);
+  }
+
+  /* Light theme background pattern */
+  html.light body {
+    background-image: radial-gradient(circle at 25% 25%, rgba(14, 165, 233, 0.03) 0%, transparent 50%),
+                      radial-gradient(circle at 75% 75%, rgba(59, 130, 246, 0.03) 0%, transparent 50%);
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  /* Dark theme scrollbar */
+  html.dark ::-webkit-scrollbar-track {
+    background-color: #111827;
+  }
+
+  html.dark ::-webkit-scrollbar-thumb {
+    background-color: #374151;
+    border-radius: 9999px;
+  }
+
+  html.dark ::-webkit-scrollbar-thumb:hover {
+    background-color: #06b6d4;
+  }
+
+  /* Light theme scrollbar */
+  html.light ::-webkit-scrollbar-track {
+    background-color: #f1f5f9;
+  }
+
+  html.light ::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 9999px;
+  }
+
+  html.light ::-webkit-scrollbar-thumb:hover {
+    background-color: #0ea5e9;
+  }
+}
+
+@layer components {
+  /* Button variants */
+  .btn-oblivion {
+    padding: 0.5rem 1rem;
+    background-color: var(--accent-primary);
+    color: white;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  }
+
+  .btn-oblivion:hover {
+    background-color: var(--accent-secondary);
+  }
+
+  .btn-oblivion-outline {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--accent-primary);
+    color: var(--accent-primary);
+    background-color: transparent;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+  }
+
+  .btn-oblivion-outline:hover {
+    background-color: var(--accent-primary);
+    color: white;
+  }
+}
