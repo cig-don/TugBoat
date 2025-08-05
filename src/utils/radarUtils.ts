@@ -87,7 +87,7 @@ export function createRadarSweep(initialSpeed: number = 2) {
     
     // Check if we've completed a full rotation
     if (state.angle < state.speed && state.angle >= 0) {
-      callbacks.onSweepComplete?.(state.angle);
+      callbacks.onSweepComplete?.();
       lastTriggeredLine = -1; // Reset for next rotation
     }
     

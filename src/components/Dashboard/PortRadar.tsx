@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { PortCardData } from '../../types/port';
-import { calculatePortPosition, getPortColor, clusterPorts, PortCluster, getPortRangeForLine } from '../../utils/util';
+import { calculatePortPosition, getPortColor, clusterPorts, getPortRangeForLine } from '../../utils/util';
 import { createRadarSweep, calculateSweepLineCoordinates } from '../../utils/radarUtils';
 import { portScanner } from '../../services/portScanner';
 import { usePorts } from '../../context/GlobalContext';
@@ -17,11 +17,11 @@ const PortRadar: React.FC<PortRadarProps> = ({ ports, selectedPort, isActiveScan
 
   // Radar sweep animation state
   const [sweepAngle, setSweepAngle] = useState(0);
-  const [isSweeping, setIsSweeping] = useState(false);
+  const [, setIsSweeping] = useState(false);
   const radarSweepRef = useRef(createRadarSweep(0.2)); // 0.2 degrees per frame = 2 RPM
 
   // Port scanning state
-  const [isLineScanning, setIsLineScanning] = useState(false);
+  const [, setIsLineScanning] = useState(false);
 
   // Port scanner context for updating discovered ports
   const { mergePorts, getPortsInRange } = usePorts();
@@ -175,7 +175,7 @@ const PortRadar: React.FC<PortRadarProps> = ({ ports, selectedPort, isActiveScan
       onSweepStart: () => {
         setIsSweeping(true);
       },
-      onLineReached: (line, angle) => {
+      onLineReached: (line) => {
         // Only log if actively scanning
         if (isActiveScanning) {
           logSpokeHit(line);
@@ -296,7 +296,7 @@ const PortRadar: React.FC<PortRadarProps> = ({ ports, selectedPort, isActiveScan
     const portNumbers = portsArray.map(p => p.port);
     const clusters = clusterPorts(portNumbers, centerX, centerY, maxRadius, 10);
 
-    return clusters.map((cluster, index) => {
+    return clusters.map((cluster) => {
       // Find port data for this cluster
       const clusterPortData = cluster.ports.map(portNum => 
         portsArray.find(p => p.port === portNum)!

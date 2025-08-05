@@ -92,6 +92,22 @@ export interface BaseUIProps {
   metadata?: Record<string, unknown>;
 }
 
+// Card component interface (legacy)
+export interface CardData {
+  title?: string;
+  subtitle?: string;
+  content?: React.ReactNode;
+  footer?: React.ReactNode;
+  variant: "glass" | "solid" | "gradient";
+  clickable?: boolean;
+  className?: string;
+}
+
+export type CardCallback = (
+  cardData: CardData,
+  event?: React.MouseEvent<HTMLDivElement>
+) => void;
+
 // Port Scanner Specific Interfaces
 
 // Port card interaction callbacks

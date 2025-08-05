@@ -20,7 +20,6 @@ export interface ScanProgress {
 
 export class PortScanner {
   private abortController: AbortController | null = null;
-  private progressCallback?: (progress: ScanProgress) => void;
 
   /**
    * Silent fetch helper to avoid console spam
@@ -227,7 +226,7 @@ export class PortScanner {
       maxConcurrent = 5
     } = options;
 
-    this.progressCallback = onProgress;
+    // Progress callback is passed as parameter
     this.abortController = new AbortController();
 
     const results: ServiceStatus[] = [];

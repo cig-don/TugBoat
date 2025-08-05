@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { usePorts } from "../../context/GlobalContext";
 import { ScanProgress } from "../../services/portScanner";
 import PortScan from "./PortScan";

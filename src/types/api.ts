@@ -1,6 +1,6 @@
 // API response interfaces for TugBoat Port Scanner
 
-import { Port, ServiceStatus, ServiceTestResult, PortScanResult } from './port';
+import { ServiceStatus, ServiceTestResult, PortScanResult } from './port';
 
 // Base API response wrapper
 export interface ApiResponse<T = unknown> {

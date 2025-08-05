@@ -52,11 +52,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose }) => {
             onClick={onClose}
             className="p-2 rounded-lg transition-colors hover:opacity-80"
             style={{ 
-              color: 'var(--text-secondary)',
-              ':hover': { 
-                color: 'var(--text-primary)',
-                backgroundColor: 'var(--bg-tertiary)'
-              }
+              color: 'var(--text-secondary)'
             }}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

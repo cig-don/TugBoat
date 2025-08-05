@@ -1,6 +1,6 @@
 import React from 'react';
 import { PortCardData } from '../../types/port';
-import { getServiceIcon, getStatusIcon } from '../../data/icons';
+import { getServiceIcon } from '../../data/icons';
 import { SERVICE_TYPE_LABELS, PORT_STATUS_COLORS } from '../../data/config';
 
 interface PortCardProps {

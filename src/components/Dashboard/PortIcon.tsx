@@ -16,7 +16,11 @@ interface PortIconState {
   rolloverPosition: { x: number; y: number };
 }
 
-const PortIcon: React.FC<PortIconProps> = ({ 
+interface PortIconComponent extends React.FC<PortIconProps> {
+  ping: (iconId: string, x: number, y: number, color: string) => void;
+}
+
+const PortIcon: PortIconComponent = ({ 
   x, 
   y, 
   ports, 
@@ -67,50 +71,10 @@ const PortIcon: React.FC<PortIconProps> = ({
 
   // Generate unique ID for this icon's animations
   const iconId = `port-icon-${ports.map(p => p.port).join('-')}`;
-  const pingId = `ping-${iconId}`;
 
-  // Function to trigger ping animation
-  const triggerPing = () => {
-    // Restart the animation by removing and re-adding the animation element
-    const existingPing = document.getElementById(pingId);
-    if (existingPing) {
-      existingPing.remove();
-    }
-    
-    // Create new ping animation element
-    const svg = document.querySelector(`#${iconId}`)?.closest('svg');
-    if (svg) {
-      const pingGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      pingGroup.id = pingId;
-      pingGroup.innerHTML = `
-        <circle cx="${x}" cy="${y}" r="5" fill="${dominantColor}" opacity="1">
-          <animate attributeName="r" values="5;24;5" dur="1s" begin="0s" />
-          <animate attributeName="opacity" values="0.8;0;0.8" dur="1s" begin="0s" />
-        </circle>
-        <circle cx="${x}" cy="${y}" r="3" fill="${dominantColor}" opacity="1">
-          <animate attributeName="r" values="3;18;3" dur="1s" begin="0s" />
-          <animate attributeName="opacity" values="0.6;0;0.6" dur="1s" begin="0s" />
-        </circle>
-        <circle cx="${x}" cy="${y}" r="1" fill="#ffffff" opacity="1">
-          <animate attributeName="r" values="1;12;1" dur="1s" begin="0s" />
-          <animate attributeName="opacity" values="1;0;1" dur="1s" begin="0s" />
-        </circle>
-      `;
-      
-      svg.appendChild(pingGroup);
-      
-      // Remove ping after animation completes
-      setTimeout(() => {
-        const ping = document.getElementById(pingId);
-        if (ping) ping.remove();
-      }, 1000);
-    }
-  };
+  // Note: ping animation is handled by the static method below
 
-  // Expose ping function to parent components
-  React.useImperativeHandle(React.useRef(), () => ({
-    ping: triggerPing
-  }));
+  // Note: ping function is exposed via static method below
 
   return (
     <>
@@ -275,4 +239,4 @@ PortIcon.ping = (iconId: string, x: number, y: number, color: string) => {
   }
 };
 
-export default PortIcon;
+export default PortIcon as PortIconComponent;
