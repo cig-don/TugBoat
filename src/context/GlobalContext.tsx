@@ -31,7 +31,14 @@ interface GlobalState {
 // Action types for state management
 type GlobalAction =
   | { type: 'SET_PORTS'; payload: PortCardData[] }
+  | { type: 'ADD_PORT'; payload: PortCardData }
+  | { type: 'ADD_PORTS'; payload: PortCardData[] }
+  | { type: 'UPDATE_PORT'; payload: PortCardData }
+  | { type: 'UPDATE_PORTS'; payload: PortCardData[] }
+  | { type: 'DELETE_PORT'; payload: number }
+  | { type: 'DELETE_PORTS'; payload: number[] }
   | { type: 'UPDATE_PORT_STATUS'; payload: { port: number; status: ServiceStatus } }
+  | { type: 'MERGE_PORTS'; payload: { ports: PortCardData[]; rangeStart: number; rangeEnd: number } }
   | { type: 'SET_SCANNING'; payload: boolean }
   | { type: 'SET_SCAN_ERROR'; payload: string | null }
   | { type: 'SET_LAST_SCAN_TIME'; payload: string }
@@ -87,7 +94,73 @@ function globalReducer(state: GlobalState, action: GlobalAction): GlobalState {
     case 'SET_PORTS':
       return {
         ...state,
-        ports: action.payload,
+        ports: Array.isArray(action.payload) ? action.payload : [],
+        lastScanTime: new Date().toISOString()
+      };
+
+    case 'ADD_PORT':
+      // Only add if port doesn't exist
+      if (state.ports.some(p => p.port === action.payload.port)) {
+        return state;
+      }
+      return {
+        ...state,
+        ports: [...state.ports, action.payload]
+      };
+
+    case 'ADD_PORTS':
+      // Add multiple ports, filtering out duplicates
+      const existingPortNumbers = new Set(state.ports.map(p => p.port));
+      const newPorts = action.payload.filter(p => !existingPortNumbers.has(p.port));
+      return {
+        ...state,
+        ports: [...state.ports, ...newPorts]
+      };
+
+    case 'UPDATE_PORT':
+      return {
+        ...state,
+        ports: state.ports.map(port =>
+          port.port === action.payload.port
+            ? { ...action.payload, isFavorite: port.isFavorite } // Preserve favorite status
+            : port
+        )
+      };
+
+    case 'UPDATE_PORTS':
+      // Update multiple ports by port number
+      const updateMap = new Map(action.payload.map(p => [p.port, p]));
+      return {
+        ...state,
+        ports: state.ports.map(port => {
+          const update = updateMap.get(port.port);
+          return update ? { ...update, isFavorite: port.isFavorite } : port;
+        })
+      };
+
+    case 'DELETE_PORT':
+      return {
+        ...state,
+        ports: state.ports.filter(port => port.port !== action.payload)
+      };
+
+    case 'DELETE_PORTS':
+      const portsToDelete = new Set(action.payload);
+      return {
+        ...state,
+        ports: state.ports.filter(port => !portsToDelete.has(port.port))
+      };
+
+    case 'MERGE_PORTS':
+      // Smart merge for a specific range - this is what we need for radar scanning
+      const { ports: mergePorts, rangeStart, rangeEnd } = action.payload;
+      const outsideRange = state.ports.filter(p => p.port < rangeStart || p.port > rangeEnd);
+      const newPortsInRange = mergePorts.filter(p => p.port >= rangeStart && p.port <= rangeEnd);
+      
+      // Merge: keep all ports outside range + new ports in range
+      return {
+        ...state,
+        ports: [...outsideRange, ...newPortsInRange],
         lastScanTime: new Date().toISOString()
       };
       
@@ -246,7 +319,27 @@ export function usePorts() {
     isScanning: state.isScanning,
     lastScanTime: state.lastScanTime,
     scanError: state.scanError,
+    
+    // Database-like functions for master port list management
     setPorts: (ports: PortCardData[]) => dispatch({ type: 'SET_PORTS', payload: ports }),
+    addPort: (port: PortCardData) => dispatch({ type: 'ADD_PORT', payload: port }),
+    addPorts: (ports: PortCardData[]) => dispatch({ type: 'ADD_PORTS', payload: ports }),
+    updatePort: (port: PortCardData) => dispatch({ type: 'UPDATE_PORT', payload: port }),
+    updatePorts: (ports: PortCardData[]) => dispatch({ type: 'UPDATE_PORTS', payload: ports }),
+    deletePort: (portNumber: number) => dispatch({ type: 'DELETE_PORT', payload: portNumber }),
+    deletePorts: (portNumbers: number[]) => dispatch({ type: 'DELETE_PORTS', payload: portNumbers }),
+    mergePorts: (ports: PortCardData[], rangeStart: number, rangeEnd: number) => 
+      dispatch({ type: 'MERGE_PORTS', payload: { ports, rangeStart, rangeEnd } }),
+    
+    // Query functions
+    findPort: (portNumber: number) => state.ports.find(p => p.port === portNumber),
+    findPorts: (portNumbers: number[]) => state.ports.filter(p => portNumbers.includes(p.port)),
+    getPortsInRange: (start: number, end: number) => state.ports.filter(p => p.port >= start && p.port <= end),
+    getOnlinePorts: () => state.ports.filter(p => p.status === 'online'),
+    getOfflinePorts: () => state.ports.filter(p => p.status === 'offline'),
+    portExists: (portNumber: number) => state.ports.some(p => p.port === portNumber),
+    
+    // Legacy functions
     updatePortStatus: (port: number, status: ServiceStatus) => 
       dispatch({ type: 'UPDATE_PORT_STATUS', payload: { port, status } }),
     setScanning: (scanning: boolean) => dispatch({ type: 'SET_SCANNING', payload: scanning }),

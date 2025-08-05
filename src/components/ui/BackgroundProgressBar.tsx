@@ -14,8 +14,6 @@ const BackgroundProgressBar: React.FC<BackgroundProgressBarProps> = ({
   const fadeTimeoutRef = useRef<number | null>(null);
 
   useEffect(() => {
-    console.log("BackgroundProgressBar - percentage:", percentage, "isScanning:", isScanning);
-    
     if (isScanning && percentage > 0) {
       // We're actively scanning, show progress
       setDisplayPercentage(percentage);
@@ -48,18 +46,6 @@ const BackgroundProgressBar: React.FC<BackgroundProgressBarProps> = ({
       }
     };
   }, []);
-
-  // Temporary debug logging for Quick Scan issues
-  if (percentage > 0) {
-    console.log(
-      "BackgroundProgressBar - percentage:",
-      percentage,
-      "displayPercentage:",
-      displayPercentage,
-      "visible:",
-      visible
-    );
-  }
 
   return (
     <div className="absolute inset-0 rounded-lg overflow-hidden">

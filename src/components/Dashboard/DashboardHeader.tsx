@@ -7,6 +7,8 @@ import BackgroundProgressBar from "../ui/BackgroundProgressBar";
 interface DashboardHeaderProps {
   scanProgress: ScanProgress | null;
   quickScan: () => Promise<void>;
+  activeScan: () => Promise<void>;
+  isActiveScanning: boolean;
   scanRange: (start: number, end: number) => Promise<void>;
   scanPorts: (ports: number[]) => Promise<void>;
   cancelScan: () => void;
@@ -15,6 +17,8 @@ interface DashboardHeaderProps {
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({ 
   scanProgress, 
   quickScan,
+  activeScan,
+  isActiveScanning,
   scanRange,
   scanPorts,
   cancelScan 
@@ -22,16 +26,6 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
   const { isScanning: globalIsScanning, scanError } = usePorts();
 
   const progressPercentage = scanProgress ? scanProgress.percentage : 0;
-
-  // Debug logging
-  console.log(
-    "DashboardHeader - globalIsScanning:",
-    globalIsScanning,
-    "scanProgress:",
-    scanProgress,
-    "progressPercentage:",
-    progressPercentage
-  );
 
   return (
     <div className="mb-8">
@@ -49,6 +43,8 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({
 
         <PortScan 
           quickScan={quickScan}
+          activeScan={activeScan}
+          isActiveScanning={isActiveScanning}
           scanRange={scanRange}
           scanPorts={scanPorts}
           cancelScan={cancelScan}

@@ -22,6 +22,7 @@ export type ServiceType =
   | 'react-dev'
   | 'nextjs'
   | 'express-api'
+  | 'unagi-api'
   | 'static-server'
   | 'database-admin'
   | 'airplay-receiver'

@@ -261,6 +261,7 @@ port-scanner/
 - Added PortRadar component
 - UI/mode fixes and port config updates
 - Added cluster port icon, mouse over and modal selection display
+- Refactored radar display and other ui fixes
 
 ---
 

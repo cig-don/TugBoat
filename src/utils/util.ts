@@ -6,10 +6,12 @@
 
 // Constants for radar calculations
 export const RADAR_CONSTANTS = {
-  TOTAL_PORTS: 65535, // Total possible ports (0-65535)
+  START_PORT: 1000, // Starting port for radar mapping
+  END_PORT: 8019, // Ending port for radar mapping (1000 + 36*195 - 1)
+  TOTAL_MAPPED_PORTS: 7020, // Total ports to map (8019 - 1000 + 1 = 7020)
   DEGREES_PER_LINE: 10, // Every 10 degrees
   TOTAL_LINES: 36, // 360 / 10 = 36 lines
-  PORTS_PER_LINE: Math.ceil(65535 / 36), // ~1821 ports per line
+  PORTS_PER_LINE: 195, // Exactly 195 ports per line
 } as const;
 
 /**
@@ -26,22 +28,42 @@ export interface PortRadarPosition {
 
 /**
  * Calculate which radar line (0-35) a port should be on
- * Each line represents 10 degrees, so port ranges are distributed across lines
- * @param port - Port number (0-65535)
- * @returns Line number (0-35)
+ * Each line represents 10 degrees, ports 1000-8019 are mapped around 360°
+ * @param port - Port number
+ * @returns Line number (0-35), or -1 if port is outside mapped range
  */
 export function getPortLine(port: number): number {
-  return Math.floor(port / RADAR_CONSTANTS.PORTS_PER_LINE) % RADAR_CONSTANTS.TOTAL_LINES;
+  // Only map ports in our defined range
+  if (port < RADAR_CONSTANTS.START_PORT || port > RADAR_CONSTANTS.END_PORT) {
+    return -1; // Outside mapped range
+  }
+  
+  // Normalize port to 0-based index (port 1000 becomes 0)
+  const normalizedPort = port - RADAR_CONSTANTS.START_PORT;
+  
+  // Calculate which line (0-35) this port belongs to
+  return Math.floor(normalizedPort / RADAR_CONSTANTS.PORTS_PER_LINE);
 }
 
 /**
  * Calculate the position along a radar line (0-1) for a port
  * @param port - Port number
- * @returns Position as fraction (0-1) where 0 is center, 1 is edge
+ * @returns Position as fraction (0-1) where 0 is inner circle, 1 is outer circle
  */
 export function getPortPositionOnLine(port: number): number {
-  const positionInGroup = port % RADAR_CONSTANTS.PORTS_PER_LINE;
-  return positionInGroup / RADAR_CONSTANTS.PORTS_PER_LINE;
+  // Only calculate for ports in our mapped range
+  if (port < RADAR_CONSTANTS.START_PORT || port > RADAR_CONSTANTS.END_PORT) {
+    return 0; // Default to inner circle for unmapped ports
+  }
+  
+  // Normalize port to 0-based index
+  const normalizedPort = port - RADAR_CONSTANTS.START_PORT;
+  
+  // Calculate position within the line (0-194 becomes 0-1)
+  const positionInLine = normalizedPort % RADAR_CONSTANTS.PORTS_PER_LINE;
+  
+  // Convert to fraction: 0 = inner circle, 1 = outer circle
+  return positionInLine / (RADAR_CONSTANTS.PORTS_PER_LINE - 1);
 }
 
 /**
@@ -81,9 +103,20 @@ export function calculatePortPosition(
   const angle = lineToAngle(line);
   const angleInRadians = degreesToRadians(angle);
   
-  // Calculate radius - start from small inner radius to avoid center clustering
-  const minRadius = maxRadius * 0.2; // Start at 20% of max radius
-  const radius = minRadius + (positionOnLine * (maxRadius - minRadius));
+  // Calculate radius - map to the 3 concentric circles
+  // positionOnLine 0.0 = inner circle, 0.5 = middle circle, 1.0 = outer circle
+  const innerRadius = maxRadius * 0.3;   // Inner circle at 30% of max
+  const middleRadius = maxRadius * 0.65; // Middle circle at 65% of max  
+  const outerRadius = maxRadius * 0.95;  // Outer circle at 95% of max
+  
+  let radius;
+  if (positionOnLine <= 0.5) {
+    // First half: interpolate between inner and middle circles
+    radius = innerRadius + (positionOnLine * 2) * (middleRadius - innerRadius);
+  } else {
+    // Second half: interpolate between middle and outer circles  
+    radius = middleRadius + ((positionOnLine - 0.5) * 2) * (outerRadius - middleRadius);
+  }
   
   // Calculate cartesian coordinates
   // Note: In SVG, angle 0 is at 3 o'clock, and we want 0 degrees at 12 o'clock
@@ -248,6 +281,41 @@ export function clusterPorts(
   }
 
   return clusters;
+}
+
+/**
+ * Get port range for a specific radar line
+ * @param line - Line number (0-35)
+ * @returns Port range [start, end] for the line
+ */
+export function getPortRangeForLine(line: number): [number, number] {
+  if (line < 0 || line >= RADAR_CONSTANTS.TOTAL_LINES) {
+    return [0, 0]; // Invalid line
+  }
+  
+  const startPort = RADAR_CONSTANTS.START_PORT + (line * RADAR_CONSTANTS.PORTS_PER_LINE);
+  const endPort = startPort + RADAR_CONSTANTS.PORTS_PER_LINE - 1;
+  
+  // Clamp to our mapped range
+  const clampedEnd = Math.min(endPort, RADAR_CONSTANTS.END_PORT);
+  
+  return [startPort, clampedEnd];
+}
+
+/**
+ * Get all ports that should be scanned for a radar line
+ * @param line - Line number (0-35)
+ * @returns Array of port numbers to scan
+ */
+export function getPortsForLine(line: number): number[] {
+  const [start, end] = getPortRangeForLine(line);
+  const ports: number[] = [];
+  
+  for (let port = start; port <= end; port++) {
+    ports.push(port);
+  }
+  
+  return ports;
 }
 
 /**

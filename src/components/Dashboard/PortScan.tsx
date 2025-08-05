@@ -3,13 +3,17 @@ import { usePorts } from "../../context/GlobalContext";
 
 interface PortScanProps {
   quickScan: () => Promise<void>;
+  activeScan: () => Promise<void>;
+  isActiveScanning: boolean;
   scanRange: (start: number, end: number) => Promise<void>;
   scanPorts: (ports: number[]) => Promise<void>;
   cancelScan: () => void;
 }
 
 const PortScan: React.FC<PortScanProps> = ({ 
-  quickScan, 
+  quickScan,
+  activeScan,
+  isActiveScanning,
   scanRange, 
   scanPorts, 
   cancelScan 
@@ -18,8 +22,6 @@ const PortScan: React.FC<PortScanProps> = ({
 
   const [customPort, setCustomPort] = useState("");
 
-  // Debug logging
-  console.log("PortScan - globalIsScanning:", globalIsScanning);
 
   // Handle custom port testing
   const handleCustomPortScan = () => {
@@ -36,10 +38,7 @@ const PortScan: React.FC<PortScanProps> = ({
       <div className="flex items-center gap-2 pointer-events-auto">
         {globalIsScanning && (
           <button
-            onClick={() => {
-              console.log("Cancel button clicked");
-              cancelScan();
-            }}
+            onClick={cancelScan}
             className="btn-oblivion-outline text-sm px-3 py-1.5"
           >
             Cancel
@@ -48,15 +47,28 @@ const PortScan: React.FC<PortScanProps> = ({
         
         <button
           onClick={quickScan}
-          disabled={globalIsScanning}
-          className="btn-oblivion text-sm px-3 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={globalIsScanning || isActiveScanning}
+          className="btn-oblivion-outline text-sm px-3 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Quick Scan
         </button>
 
         <button
+          onClick={activeScan}
+          disabled={globalIsScanning && !isActiveScanning}
+          className={`text-sm px-3 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 ${
+            isActiveScanning 
+              ? 'bg-cyan-500/20 text-cyan-400 border border-cyan-500/50 rounded' 
+              : 'btn-oblivion-outline'
+          }`}
+          title={isActiveScanning ? 'Stop active scanning with radar sweep' : 'Start active scanning with radar sweep'}
+        >
+          {isActiveScanning ? '⏸️ Stop' : '📡'} Active Scan
+        </button>
+
+        <button
           onClick={() => scanRange(3000, 9999)}
-          disabled={globalIsScanning}
+          disabled={globalIsScanning || isActiveScanning}
           className="btn-oblivion-outline text-sm px-3 py-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Deep Scan

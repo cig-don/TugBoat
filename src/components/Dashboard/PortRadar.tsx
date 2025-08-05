@@ -1,34 +1,213 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { PortCardData } from '../../types/port';
-import { calculatePortPosition, getPortColor, clusterPorts, PortCluster } from '../../utils/util';
-import PortSelectionRollover from './PortSelectionRollover';
+import { calculatePortPosition, getPortColor, clusterPorts, PortCluster, getPortRangeForLine } from '../../utils/util';
+import { createRadarSweep, calculateSweepLineCoordinates } from '../../utils/radarUtils';
+import { portScanner } from '../../services/portScanner';
+import { usePorts } from '../../context/GlobalContext';
+import PortIcon from './PortIcon';
 
 interface PortRadarProps {
   ports: PortCardData[];
   selectedPort?: number;
+  isActiveScanning?: boolean;
   onPortClick?: (port: number) => void;
 }
 
-const PortRadar: React.FC<PortRadarProps> = ({ ports, selectedPort, onPortClick }) => {
-  const [rolloverState, setRolloverState] = useState<{
-    isVisible: boolean;
-    position: { x: number; y: number };
-    ports: PortCardData[];
-  }>({
-    isVisible: false,
-    position: { x: 0, y: 0 },
-    ports: []
-  });
+const PortRadar: React.FC<PortRadarProps> = ({ ports, selectedPort, isActiveScanning, onPortClick }) => {
+
+  // Radar sweep animation state
+  const [sweepAngle, setSweepAngle] = useState(0);
+  const [isSweeping, setIsSweeping] = useState(false);
+  const radarSweepRef = useRef(createRadarSweep(0.2)); // 0.2 degrees per frame = 2 RPM
+
+  // Port scanning state
+  const [isLineScanning, setIsLineScanning] = useState(false);
+
+  // Port scanner context for updating discovered ports
+  const { mergePorts, getPortsInRange } = usePorts();
+
+
 
   // Make radar responsive to container width
-  const size = 400; // Larger base size
+  const size = 450; // Increased size to accommodate labels
   const centerX = size / 2;
   const centerY = size / 2;
-  const radius1 = size * 0.15;  // 15% of size
-  const radius2 = size * 0.30;  // 30% of size  
-  const radius3 = size * 0.45;  // 45% of size
-  const radius4 = size * 0.48;  // 48% of size (outer thick circle)
+  const radius1 = size * 0.13;  // 13% of size (adjusted for larger canvas)
+  const radius2 = size * 0.27;  // 27% of size  
+  const radius3 = size * 0.40;  // 40% of size
+  const radius4 = size * 0.43;  // 43% of size (outer thick circle)
   const maxRadius = radius4; // Use outer circle as max radius for port positioning
+
+  // Function to handle when radar hits a spoke
+  const logSpokeHit = async (line: number) => {
+    const [startPort, endPort] = getPortRangeForLine(line);
+    console.log(`🎯 Radar hit spoke ${line} - scanning ports ${startPort}-${endPort}`);
+    
+    // Show pings for all existing ports on this line
+    showPingsForPortsOnLine(line);
+    
+    // Start async scan for ports on this line
+    scanPortsOnLine(line);
+  };
+
+  // Show ping animations for existing ports on this radar line
+  const showPingsForPortsOnLine = (line: number) => {
+    const [startPort, endPort] = getPortRangeForLine(line);
+    
+    // Find existing ports in this range - ensure ports is an array
+    const portsArray = Array.isArray(ports) ? ports : [];
+    console.log(`🔍 Line ${line}: Checking range ${startPort}-${endPort} against existing ports:`, portsArray.map(p => p.port));
+    
+    const portsOnLine = portsArray.filter(port => 
+      port.port >= startPort && port.port <= endPort && port.status === 'online'
+    );
+    
+    console.log(`📍 Line ${line}: Found ${portsOnLine.length} ports on this line:`, portsOnLine.map(p => p.port));
+    
+    // Create ping animations for each port using the PortIcon.ping method
+    portsOnLine.forEach(port => {
+      const position = calculatePortPosition(port.port, centerX, centerY, maxRadius);
+      const iconId = `port-icon-${port.port}`;
+      console.log(`🎯 Triggering ping for port ${port.port} with iconId: ${iconId}`);
+      PortIcon.ping(iconId, position.x, position.y, getPortColor('online'));
+    });
+  };
+
+  // Helper function to update master list for scanned range
+  const updateMasterListForRange = (foundPorts: PortCardData[], rangeStart: number, rangeEnd: number) => {
+    console.log(`📊 Updating master list: Found ${foundPorts.length} ports in range ${rangeStart}-${rangeEnd}`);
+    
+    const currentRangePorts = getPortsInRange(rangeStart, rangeEnd);
+    console.log(`📊 Current ports in range: ${currentRangePorts.length}`, currentRangePorts.map(p => p.port));
+    console.log(`📊 Found ports: ${foundPorts.length}`, foundPorts.map(p => p.port));
+    
+    // Use mergePorts to replace all ports in the range with found ports
+    // This automatically handles add/update/delete for the specific range
+    mergePorts(foundPorts, rangeStart, rangeEnd);
+    
+    console.log(`📊 Master list updated for range ${rangeStart}-${rangeEnd}`);
+  };
+
+  // Async function to scan ports on a line
+  const scanPortsOnLine = async (line: number) => {
+    setIsLineScanning(true);
+    const [rangeStart, rangeEnd] = getPortRangeForLine(line);
+    
+    try {
+      console.log(`📡 Scanning line ${line}: ports ${rangeStart}-${rangeEnd}`);
+      
+      // Only test ports that are likely to be active:
+      // 1. Ports that are already in the master list within this range
+      // 2. Common development ports within this range
+      const portsToTest = new Set<number>();
+      
+      // Add existing ports in this range
+      const currentRangePorts = getPortsInRange(rangeStart, rangeEnd);
+      currentRangePorts.forEach(port => {
+        portsToTest.add(port.port);
+      });
+      
+      // Add common dev ports in this range
+      const commonDevPorts = [3000, 3001, 3100, 4000, 5000, 5173, 7000, 8000, 8080, 9000];
+      commonDevPorts.forEach(port => {
+        if (port >= rangeStart && port <= rangeEnd) {
+          portsToTest.add(port);
+        }
+      });
+      
+      console.log(`📡 Testing ${portsToTest.size} potential ports in range:`, Array.from(portsToTest));
+      
+      // Test the selected ports
+      const scannedResults: PortCardData[] = [];
+      
+      for (const port of portsToTest) {
+        try {
+          const result = await portScanner.testPort(port, 500);
+          scannedResults.push({
+            ...result,
+            isFavorite: false,
+            isVisible: true
+          });
+          console.log(`🔍 Port ${port}: ${result.status}`);
+        } catch {
+          // Port is offline
+          scannedResults.push({
+            port,
+            status: 'offline' as const,
+            serviceType: 'unknown' as const,
+            lastChecked: new Date().toISOString(),
+            isFavorite: false,
+            isVisible: true
+          });
+          console.log(`🔍 Port ${port}: offline`);
+        }
+      }
+      
+      // Show pings for online ports
+      const onlinePorts = scannedResults.filter(p => p.status === 'online');
+      onlinePorts.forEach(port => {
+        const position = calculatePortPosition(port.port, centerX, centerY, maxRadius);
+        const iconId = `port-icon-${port.port}`;
+        PortIcon.ping(iconId, position.x, position.y, getPortColor('online'));
+      });
+      
+      console.log(`📡 Line ${line} results: ${onlinePorts.length} online, ${scannedResults.length - onlinePorts.length} offline`);
+      
+      // Update master list for the scanned range
+      updateMasterListForRange(onlinePorts, rangeStart, rangeEnd);
+      
+    } catch (error) {
+      console.error(`Error scanning line ${line}:`, error);
+    } finally {
+      setIsLineScanning(false);
+    }
+  };
+
+
+  // Initialize radar sweep animation
+  useEffect(() => {
+    const radarSweep = radarSweepRef.current;
+    
+    radarSweep.setCallbacks({
+      onAngleChange: (angle) => {
+        setSweepAngle(angle);
+      },
+      onSweepStart: () => {
+        setIsSweeping(true);
+      },
+      onLineReached: (line, angle) => {
+        // Only log if actively scanning
+        if (isActiveScanning) {
+          logSpokeHit(line);
+        }
+      },
+      onSweepComplete: () => {
+        // Optional: stop after one complete rotation
+        // radarSweep.stop();
+        // setIsSweeping(false);
+      }
+    });
+
+    // Cleanup on unmount
+    return () => {
+      radarSweep.stop();
+    };
+  }, [isActiveScanning]);
+
+  // Control radar sweep based on active scanning state
+  useEffect(() => {
+    const radarSweep = radarSweepRef.current;
+    
+    if (isActiveScanning) {
+      console.log('🎯 Starting radar sweep animation');
+      radarSweep.start();
+    } else {
+      console.log('⏸️ Stopping radar sweep animation');
+      radarSweep.stop();
+      setIsSweeping(false);
+    }
+  }, [isActiveScanning]);
+
 
   // Generate 36 lines every 10 degrees for port positioning
   const generateRadarLines = () => {
@@ -58,113 +237,82 @@ const PortRadar: React.FC<PortRadarProps> = ({ ports, selectedPort, onPortClick 
     return lines;
   };
 
-  // Generate port clusters
-  const generatePortClusters = () => {
-    if (!ports || ports.length === 0) return [];
+  // Generate the animated radar sweep line
+  const generateSweepLine = () => {
+    const sweepLine = calculateSweepLineCoordinates(centerX, centerY, radius4, sweepAngle);
+    
+    return (
+      <g key="radar-sweep">
+        {/* Sweep gradient definition */}
+        <defs>
+          <linearGradient id="sweepGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="rgba(0, 212, 255, 0)" stopOpacity="0" />
+            <stop offset="70%" stopColor="#00d4ff" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#00d4ff" stopOpacity="1" />
+          </linearGradient>
+          <filter id="sweepGlow">
+            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+            <feMerge> 
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+        
+        {/* Main sweep line */}
+        <line
+          x1={sweepLine.x1}
+          y1={sweepLine.y1}
+          x2={sweepLine.x2}
+          y2={sweepLine.y2}
+          stroke="#00d4ff"
+          strokeWidth="2"
+          filter="url(#sweepGlow)"
+          opacity="0.9"
+        />
+        
+        {/* Sweep line shadow/glow effect */}
+        <line
+          x1={sweepLine.x1}
+          y1={sweepLine.y1}
+          x2={sweepLine.x2}
+          y2={sweepLine.y2}
+          stroke="#00d4ff"
+          strokeWidth="4"
+          opacity="0.3"
+        />
+      </g>
+    );
+  };
+
+
+  // Generate port icons using the new PortIcon component
+  const generatePortIcons = () => {
+    // Ensure ports is an array
+    const portsArray = Array.isArray(ports) ? ports : [];
+    if (portsArray.length === 0) return [];
 
     // Create clusters from port data
-    const portNumbers = ports.map(p => p.port);
+    const portNumbers = portsArray.map(p => p.port);
     const clusters = clusterPorts(portNumbers, centerX, centerY, maxRadius, 10);
 
     return clusters.map((cluster, index) => {
       // Find port data for this cluster
       const clusterPortData = cluster.ports.map(portNum => 
-        ports.find(p => p.port === portNum)!
+        portsArray.find(p => p.port === portNum)!
       ).filter(Boolean);
 
       const hasSelectedPort = cluster.ports.includes(selectedPort || -1);
-      const isCluster = cluster.isCluster;
-
-      // For clusters, use the dominant color (most common status)
-      const statusCounts = clusterPortData.reduce((acc, port) => {
-        acc[port.status] = (acc[port.status] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-      
-      const dominantStatus = Object.entries(statusCounts)
-        .sort(([,a], [,b]) => b - a)[0][0];
-      const dominantColor = getPortColor(dominantStatus);
-
-      const handleClusterClick = (event: React.MouseEvent) => {
-        if (isCluster) {
-          // Show rollover for multiple ports
-          const rect = (event.target as SVGElement).getBoundingClientRect();
-          const svgRect = (event.currentTarget as SVGSVGElement).closest('svg')?.getBoundingClientRect();
-          
-          if (svgRect) {
-            setRolloverState({
-              isVisible: true,
-              position: {
-                x: rect.left + window.scrollX,
-                y: rect.top + window.scrollY
-              },
-              ports: clusterPortData
-            });
-          }
-        } else {
-          // Single port, select directly
-          onPortClick?.(cluster.ports[0]);
-        }
-      };
 
       return (
-        <g key={`cluster-${index}`}>
-          {/* Cluster/Port circle */}
-          <circle
-            cx={cluster.centerX}
-            cy={cluster.centerY}
-            r={hasSelectedPort ? 5 : 4}
-            fill={isCluster ? dominantColor : "none"}
-            stroke={dominantColor}
-            strokeWidth={isCluster ? (hasSelectedPort ? 2 : 1) : (hasSelectedPort ? 2 : 1)}
-            className="cursor-pointer transition-all duration-200"
-            onClick={handleClusterClick}
-            style={{
-              filter: hasSelectedPort ? 'drop-shadow(0 0 8px currentColor)' : 'none',
-              opacity: dominantStatus === 'online' ? 1 : 0.7
-            }}
-          >
-            <title>
-              {isCluster 
-                ? `Ports: ${cluster.ports.join(', ')}`
-                : `Port ${cluster.ports[0]} - ${clusterPortData[0]?.serviceType} (${clusterPortData[0]?.status})`
-              }
-            </title>
-          </circle>
-
-          {/* Cluster count indicator */}
-          {isCluster && cluster.ports.length > 1 && (
-            <text
-              x={cluster.centerX}
-              y={cluster.centerY}
-              textAnchor="middle"
-              dominantBaseline="central"
-              className="text-xs font-bold pointer-events-none"
-              style={{ 
-                fill: isCluster ? 'white' : dominantColor,
-                textShadow: '1px 1px 2px rgba(0,0,0,0.8)',
-                fontSize: '10px'
-              }}
-            >
-              {cluster.ports.length}
-            </text>
-          )}
-          
-          {/* Port label for selected single port */}
-          {!isCluster && hasSelectedPort && (
-            <text
-              x={cluster.centerX}
-              y={cluster.centerY - 12}
-              textAnchor="middle"
-              className="text-xs fill-white font-mono pointer-events-none"
-              style={{ 
-                textShadow: '1px 1px 2px rgba(0,0,0,0.8)'
-              }}
-            >
-              {cluster.ports[0]}
-            </text>
-          )}
-        </g>
+        <PortIcon
+          key={`port-icon-${cluster.ports.join('-')}`}
+          x={cluster.centerX}
+          y={cluster.centerY}
+          ports={clusterPortData}
+          isSelected={hasSelectedPort}
+          onClick={onPortClick}
+        />
       );
     });
   };
@@ -219,8 +367,11 @@ const PortRadar: React.FC<PortRadarProps> = ({ ports, selectedPort, onPortClick 
             {/* Radar lines every 10 degrees */}
             {generateRadarLines()}
             
-            {/* Port clusters */}
-            {generatePortClusters()}
+            {/* Port icons */}
+            {generatePortIcons()}
+            
+            {/* Animated radar sweep line - only show when actively scanning */}
+            {isActiveScanning && generateSweepLine()}
             
             {/* Center dot */}
             <circle
@@ -233,18 +384,6 @@ const PortRadar: React.FC<PortRadarProps> = ({ ports, selectedPort, onPortClick 
         </div>
       </div>
 
-      {/* Port Selection Rollover */}
-      <PortSelectionRollover
-        ports={rolloverState.ports}
-        position={rolloverState.position}
-        isVisible={rolloverState.isVisible}
-        selectedPort={selectedPort}
-        onPortSelect={(port) => {
-          onPortClick?.(port);
-          setRolloverState(prev => ({ ...prev, isVisible: false }));
-        }}
-        onClose={() => setRolloverState(prev => ({ ...prev, isVisible: false }))}
-      />
     </>
   );
 };

@@ -8,12 +8,14 @@ import { usePorts } from '../context/GlobalContext';
 export interface UsePortScannerResult {
   // State
   isScanning: boolean;
+  isActiveScanning: boolean;
   scanProgress: ScanProgress | null;
   lastScanTime: Date | null;
   error: string | null;
   
   // Actions
   quickScan: () => Promise<void>;
+  activeScan: () => Promise<void>;
   scanRange: (start: number, end: number) => Promise<void>;
   scanPorts: (ports: number[]) => Promise<void>;
   testSinglePort: (port: number) => Promise<ServiceStatus>;
@@ -26,19 +28,20 @@ export function usePortScanner(): UsePortScannerResult {
   
   // Local state
   const [isScanning, setIsScanning] = useState(false);
+  const [isActiveScanning, setIsActiveScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState<ScanProgress | null>(null);
   const [lastScanTime, setLastScanTime] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Progress callback for scanner
   const onProgress = useCallback((progress: ScanProgress) => {
-    console.log('usePortScanner - onProgress called:', progress);
     setScanProgress(progress);
     setScanning(progress.current < progress.total);
   }, [setScanning]);
 
   // Quick scan of common development ports
   const quickScan = useCallback(async () => {
+    console.log('🔄 usePortScanner: quickScan called');
     try {
       setIsScanning(true);
       setScanning(true);
@@ -54,6 +57,7 @@ export function usePortScanner(): UsePortScannerResult {
         isVisible: true
       }));
 
+      console.log('🔄 usePortScanner: quickScan replacing ports with:', portData.map(p => p.port));
       setPorts(portData);
       setLastScanTime(new Date());
       
@@ -67,6 +71,33 @@ export function usePortScanner(): UsePortScannerResult {
       setScanProgress(null);
     }
   }, [setPorts, setScanning, setScanError, onProgress]);
+
+  // Cancel ongoing scan
+  const cancelScan = useCallback(() => {
+    portScanner.cancelScan();
+    setIsScanning(false);
+    setScanning(false);
+    setScanProgress(null);
+    setIsActiveScanning(false); // Also stop active scanning
+  }, [setScanning]);
+
+  // Active scan with radar sweep animation
+  const activeScan = useCallback(async () => {
+    if (isActiveScanning) {
+      // Stop active scanning
+      setIsActiveScanning(false);
+      if (isScanning) {
+        cancelScan();
+      }
+      return;
+    }
+
+    // Start active scanning - just enable radar sweep mode
+    // The radar sweep will handle port scanning through scanLineForPorts
+    setIsActiveScanning(true);
+    setError(null);
+    setLastScanTime(new Date());
+  }, [isActiveScanning, isScanning, cancelScan]);
 
   // Scan a specific port range
   const scanRange = useCallback(async (start: number, end: number) => {
@@ -157,14 +188,6 @@ export function usePortScanner(): UsePortScannerResult {
     }
   }, []);
 
-  // Cancel ongoing scan
-  const cancelScan = useCallback(() => {
-    portScanner.cancelScan();
-    setIsScanning(false);
-    setScanning(false);
-    setScanProgress(null);
-  }, [setScanning]);
-
   // Clear error
   const clearError = useCallback(() => {
     setError(null);
@@ -183,12 +206,14 @@ export function usePortScanner(): UsePortScannerResult {
   return {
     // State
     isScanning,
+    isActiveScanning,
     scanProgress,
     lastScanTime,
     error,
     
     // Actions
     quickScan,
+    activeScan,
     scanRange,
     scanPorts,
     testSinglePort,

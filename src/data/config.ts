@@ -5,6 +5,7 @@ import { ServiceType } from "../types/port";
 // Default port ranges for scanning
 export const DEFAULT_PORT_RANGES: Array<[number, number]> = [
   [3000, 3010], // React/Next.js dev servers
+  [3100, 3110], // API servers (including 3100)
   [4000, 4010], // Development servers
   [5000, 5010], // Flask, Express servers
   [5173, 5180], // Vite dev servers (5173 is default, but can increment)
@@ -17,6 +18,7 @@ export const COMMON_DEV_PORTS = [
   1313, // Hugo
   3000, // React, Next.js
   3001, // Alternative React
+  3100, // API servers
   4000, // Jekyll, Gatsby
   5000, // Flask default/Mac AirPlay Receiver
   5173, // Vite default
@@ -73,6 +75,7 @@ export const SERVICE_TYPE_LABELS: Record<ServiceType, string> = {
   nextjs: "Next.js",
   "vite-dev": "Vite Dev",
   "express-api": "Express API",
+  "unagi-api": "UXSE API",
   "webpack-dev": "Webpack Dev",
   "static-server": "Static Server",
   "database-admin": "DB Admin",
@@ -104,3 +107,7 @@ export const ANIMATION_DURATIONS = {
   scan: 2000,
   glow: 2000,
 } as const;
+
+// Debug: Log config on module load
+console.log('TugBoat Config loaded - DEFAULT_PORT_RANGES:', DEFAULT_PORT_RANGES);
+console.log('TugBoat Config loaded - Total COMMON_DEV_PORTS:', COMMON_DEV_PORTS.length);

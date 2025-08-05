@@ -9,15 +9,21 @@ import PortRadar from './PortRadar';
 const Dashboard: React.FC = () => {
   const { ports } = usePorts();
   const { searchQuery } = useUI();
-  const { quickScan, scanRange, scanPorts, cancelScan, scanProgress } = usePortScanner();
+  const { quickScan, activeScan, isActiveScanning, scanRange, scanPorts, cancelScan, scanProgress } = usePortScanner();
   const [selectedPort, setSelectedPort] = useState<number | undefined>();
 
-  // Auto-run quick scan on component mount
+  // Auto-run quick scan on component mount (but not during active scanning)
   useEffect(() => {
-    if (ports.length === 0) {
+    if (ports.length === 0 && !isActiveScanning) {
+      console.log('🔄 Dashboard: Auto-triggering quickScan because ports are empty');
       quickScan();
     }
   }, []);
+
+  // Debug port changes
+  useEffect(() => {
+    console.log(`📊 Dashboard: Port count changed to ${ports.length}`, ports.map(p => p.port));
+  }, [ports]);
 
   // Filter ports - only show online ports and apply search query
   const filteredPorts = ports.filter(port => {
@@ -50,6 +56,8 @@ const Dashboard: React.FC = () => {
         <DashboardHeader 
           scanProgress={scanProgress} 
           quickScan={quickScan}
+          activeScan={activeScan}
+          isActiveScanning={isActiveScanning}
           scanRange={scanRange}
           scanPorts={scanPorts}
           cancelScan={cancelScan}
@@ -61,6 +69,7 @@ const Dashboard: React.FC = () => {
           <PortRadar 
             ports={displayPorts} 
             selectedPort={selectedPort}
+            isActiveScanning={isActiveScanning}
             onPortClick={handlePortClick}
           />
           <PortsPanel 

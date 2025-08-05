@@ -23,6 +23,27 @@ export class PortScanner {
   private progressCallback?: (progress: ScanProgress) => void;
 
   /**
+   * Silent fetch helper to avoid console spam
+   */
+  private async silentFetch(url: string, controller: AbortController): Promise<Response | null> {
+    try {
+      // Use a promise that resolves to null on any error to avoid console logs
+      return await new Promise<Response | null>((resolve) => {
+        fetch(url, {
+          method: 'HEAD',
+          mode: 'no-cors',
+          signal: controller.signal,
+          cache: 'no-cache'
+        })
+        .then(resolve)
+        .catch(() => resolve(null)); // Silently resolve to null on error
+      });
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Test a single port for HTTP connectivity
    */
   async testPort(port: number, timeout = 3000): Promise<ServiceStatus> {
@@ -37,17 +58,16 @@ export class PortScanner {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-        const response = await fetch(url, {
-          method: 'HEAD',
-          mode: 'no-cors', // Bypass CORS for connectivity testing
-          signal: controller.signal,
-          cache: 'no-cache'
-        });
+        const response = await this.silentFetch(url, controller);
 
         clearTimeout(timeoutId);
+        
+        // Skip if fetch failed
+        if (!response) continue;
+        
         const responseTime = Date.now() - startTime;
         
-        // Try to get actual response for service detection
+        // Try to get actual response for service detection (will handle CORS internally)
         const serviceType = await this.detectServiceType(url, port);
 
         return {
@@ -86,7 +106,6 @@ export class PortScanner {
       lastChecked: new Date().toISOString()
     };
   }
-
   /**
    * Detect service type based on HTTP response headers and content
    */
@@ -98,15 +117,30 @@ export class PortScanner {
     }
 
     try {
-      // Try to get a proper response (not no-cors) for headers
-      const response = await fetch(url, {
-        method: 'GET',
+      // Try HEAD request first to get headers without CORS issues
+      let response = await fetch(url, {
+        method: 'HEAD',
         cache: 'no-cache'
       });
+
+      // If HEAD fails, try GET with no-cors
+      if (!response.ok || response.type === 'opaque') {
+        response = await fetch(url, {
+          method: 'GET',
+          mode: 'no-cors',
+          cache: 'no-cache'
+        });
+        
+        // With no-cors, we can't read headers or content, so fallback to port-based detection
+        if (response.type === 'opaque') {
+          return this.detectServiceByPort(port);
+        }
+      }
 
       const headers = response.headers;
       const serverHeader = headers.get('server')?.toLowerCase() || '';
       const poweredBy = headers.get('x-powered-by')?.toLowerCase() || '';
+      const xService = headers.get('x-service')?.toLowerCase() || '';
       
       // Try to get some content for detection
       let content = '';
@@ -114,6 +148,11 @@ export class PortScanner {
         content = (await response.text()).toLowerCase();
       } catch {
         // Content reading failed, use headers only
+      }
+
+      // Specific API detection by X-Service header
+      if (xService === 'unagi-api' || content.includes('unagi-api') || content.includes('uxse backend api')) {
+        return 'unagi-api';
       }
 
       // Vite dev server detection
@@ -156,14 +195,23 @@ export class PortScanner {
 
     } catch {
       // CORS or other error, but we know something is running
-      // Make educated guesses based on port number
-      if (port === 3000 || port === 3001) return 'react-dev';
-      if (port === 5173) return 'vite-dev';
-      if (port === 8080) return 'express-api';
-      if (port === 4000) return 'static-server';
-      
-      return 'unknown';
+      // Fall back to port-based detection
+      return this.detectServiceByPort(port);
     }
+  }
+
+  /**
+   * Detect service type based on port number (fallback method)
+   */
+  private detectServiceByPort(port: number): ServiceType {
+    // Make educated guesses based on port number
+    if (port === 3000 || port === 3001) return 'react-dev';
+    if (port === 3100) return 'unagi-api'; // Common port for unagi-api
+    if (port === 5173) return 'vite-dev';
+    if (port === 8080) return 'express-api';
+    if (port === 4000) return 'static-server';
+    
+    return 'unknown';
   }
 
   /**
@@ -248,6 +296,7 @@ export class PortScanner {
         }
       }
     });
+
 
     const results: ServiceStatus[] = [];
     const total = commonPorts.length;
